@@ -1,8 +1,10 @@
 import { useFile } from "@/context/file"
 import { encodeFilePath } from "@/context/file/path"
+import { useData } from "@mimo-ai/ui/context"
 import { Collapsible } from "@mimo-ai/ui/collapsible"
 import { FileIcon } from "@mimo-ai/ui/file-icon"
 import { Icon } from "@mimo-ai/ui/icon"
+import { IconButton } from "@mimo-ai/ui/icon-button"
 import {
   createEffect,
   createMemo,
@@ -209,6 +211,7 @@ export default function FileTree(props: {
   _chain?: readonly string[]
 }) {
   const file = useFile()
+  const data = useData()
   const level = props.level ?? 0
   const draggable = () => props.draggable ?? true
 
@@ -462,6 +465,7 @@ export default function FileTree(props: {
                   as="button"
                   type="button"
                   onClick={() => props.onFileClick?.(node)}
+                  class="group/filenode relative"
                 >
                   <div class="w-4 shrink-0" />
                   <Switch>
@@ -495,6 +499,18 @@ export default function FileTree(props: {
                       </span>
                     </Match>
                   </Switch>
+                  <Show when={data.downloadFile}>
+                    <div class="absolute inset-y-0 right-1 opacity-0 group-hover/filenode:opacity-100 flex items-center">
+                      <IconButton
+                        icon="download"
+                        size="small"
+                        onClick={(e: MouseEvent) => {
+                          e.stopPropagation()
+                          data.downloadFile?.(node.path)
+                        }}
+                      />
+                    </div>
+                  </Show>
                 </FileTreeNode>
               </Match>
             </Switch>

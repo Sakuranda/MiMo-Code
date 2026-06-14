@@ -64,6 +64,8 @@ import { Persist, persisted } from "@/utils/persist"
 import { extractPromptFromParts } from "@/utils/prompt"
 import { same } from "@/utils/same"
 import { formatServerError } from "@/utils/server-errors"
+import { MOBILE_FILES_MODE } from "@/components/mobile-files/config"
+import { MobileFilesPanel } from "@/components/mobile-files/files-panel"
 
 const emptyUserMessages: UserMessage[] = []
 type FollowupItem = FollowupDraft & { id: string }
@@ -513,7 +515,7 @@ export default function Page() {
 
   const [store, setStore] = createStore({
     messageId: undefined as string | undefined,
-    mobileTab: "session" as "session" | "changes",
+    mobileTab: "session" as "session" | "changes" | "files",
     changes: "git" as ChangeMode,
     newSessionWorktree: "main",
     deferRender: false,
@@ -583,6 +585,8 @@ export default function Page() {
     return list
   })
   const mobileChanges = createMemo(() => !isDesktop() && store.mobileTab === "changes")
+  const mobileFilesTab = () => MOBILE_FILES_MODE === "tab"
+  const mobileFiles = () => !isDesktop() && mobileFilesTab() && store.mobileTab === "files"
   const wantsReview = createMemo(() =>
     isDesktop()
       ? desktopFileTreeOpen() || (desktopReviewOpen() && activeTab() === "review")
@@ -1802,7 +1806,7 @@ export default function Page() {
             <Tabs.List>
               <Tabs.Trigger
                 value="session"
-                class="!w-1/2 !max-w-none"
+                class={mobileFilesTab() ? "!w-1/3 !max-w-none" : "!w-1/2 !max-w-none"}
                 classes={{ button: "w-full" }}
                 onClick={() => setStore("mobileTab", "session")}
               >
@@ -1810,7 +1814,7 @@ export default function Page() {
               </Tabs.Trigger>
               <Tabs.Trigger
                 value="changes"
-                class="!w-1/2 !max-w-none !border-r-0"
+                class={mobileFilesTab() ? "!w-1/3 !max-w-none" : "!w-1/2 !max-w-none !border-r-0"}
                 classes={{ button: "w-full" }}
                 onClick={() => setStore("mobileTab", "changes")}
               >
@@ -1818,6 +1822,16 @@ export default function Page() {
                   ? language.t("session.review.filesChanged", { count: reviewCount() })
                   : language.t("session.review.change.other")}
               </Tabs.Trigger>
+              <Show when={mobileFilesTab()}>
+                <Tabs.Trigger
+                  value="files"
+                  class="!w-1/3 !max-w-none !border-r-0"
+                  classes={{ button: "w-full" }}
+                  onClick={() => setStore("mobileTab", "files")}
+                >
+                  {language.t("session.tab.files")}
+                </Tabs.Trigger>
+              </Show>
             </Tabs.List>
           </Tabs>
         </Show>
@@ -1878,6 +1892,9 @@ export default function Page() {
                     anchor={anchor}
                   />
                 </Show>
+              </Match>
+              <Match when={params.id && mobileFiles()}>
+                <MobileFilesPanel hideHeader />
               </Match>
               <Match when={true}>
                 <NewSessionView worktree={newSessionWorktree()} />
