@@ -1,4 +1,4 @@
-import { For, Match, Show, Switch, createEffect, createMemo, onCleanup, type JSX } from "solid-js"
+import { For, Match, Show, Switch, createEffect, createMemo, createSignal, onCleanup, type Accessor, type JSX } from "solid-js"
 import { createStore } from "solid-js/store"
 import { createMediaQuery } from "@solid-primitives/media"
 import { Tabs } from "@mimo-ai/ui/tabs"
@@ -13,6 +13,7 @@ import { ConstrainDragYAxis, getDraggableId } from "@/utils/solid-dnd"
 import { useDialog } from "@mimo-ai/ui/context/dialog"
 
 import FileTree from "@/components/file-tree"
+import { useData } from "@mimo-ai/ui/context"
 import { SessionContextUsage } from "@/components/session-context-usage"
 import { SessionContextTab, SortableTab, FileVisual } from "@/components/session"
 import { useCommand } from "@/context/command"
@@ -40,8 +41,10 @@ export function SessionSidePanel(props: {
   focusReviewDiff: (path: string) => void
   reviewSnap: boolean
   size: Sizing
+  sessionID?: Accessor<string | undefined>
 }) {
   const layout = useLayout()
+  const data = useData()
   const platform = usePlatform()
   const settings = useSettings()
   const sync = useSync()
@@ -144,12 +147,25 @@ export function SessionSidePanel(props: {
 
   const fileTreeTab = () => layout.fileTree.tab()
 
+  const [currentFilesTab, setCurrentFilesTab] = createSignal(false)
+
+  const activeTreeTab = createMemo(() => {
+    if (currentFilesTab()) return "current"
+    return fileTreeTab()
+  })
+
   const setFileTreeTabValue = (value: string) => {
+    if (value === "current") {
+      setCurrentFilesTab(true)
+      return
+    }
+    setCurrentFilesTab(false)
     if (value !== "changes" && value !== "all") return
     layout.fileTree.setTab(value)
   }
 
   const showAllFiles = () => {
+    setCurrentFilesTab(false)
     if (fileTreeTab() !== "changes") return
     layout.fileTree.setTab("all")
   }
@@ -372,7 +388,7 @@ export function SessionSidePanel(props: {
               >
                 <Tabs
                   variant="pill"
-                  value={fileTreeTab()}
+                  value={activeTreeTab()}
                   onChange={setFileTreeTabValue}
                   class="h-full"
                   data-scope="filetree"
@@ -386,6 +402,9 @@ export function SessionSidePanel(props: {
                     </Tabs.Trigger>
                     <Tabs.Trigger value="all" class="flex-1" classes={{ button: "w-full" }}>
                       {language.t("session.files.all")}
+                    </Tabs.Trigger>
+                    <Tabs.Trigger value="current" class="flex-1" classes={{ button: "w-full" }}>
+                      {language.t("session.files.current")}
                     </Tabs.Trigger>
                   </Tabs.List>
                   <Tabs.Content value="changes" class="bg-background-stronger px-3 py-0">
@@ -426,6 +445,24 @@ export function SessionSidePanel(props: {
                         />
                       </Match>
                     </Switch>
+                  </Tabs.Content>
+                  <Tabs.Content value="current" class="bg-background-stronger px-3 py-0 h-full overflow-auto">
+                    <Show
+                      when={props.sessionID?.()}
+                      fallback={empty(language.t("session.files.empty"))}
+                    >
+                      {(sid) => (
+                        <FileTree
+                          path={`uploads/${sid()}`}
+                          class="pt-3"
+                          draggable={false}
+                          onFileClick={(node) => {
+                            if (node.type !== "file") return
+                            data.downloadFile?.(node.path)
+                          }}
+                        />
+                      )}
+                    </Show>
                   </Tabs.Content>
                 </Tabs>
               </div>

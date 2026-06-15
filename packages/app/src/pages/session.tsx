@@ -1980,6 +1980,7 @@ export default function Page() {
           focusReviewDiff={focusReviewDiff}
           reviewSnap={ui.reviewSnap}
           size={size}
+          sessionID={() => params.id}
         />
       </div>
 
