@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HL分析</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --border: #2a2d3a;
+      --accent: #4f7cff;
+      --accent-hover: #6b94ff;
+      --text: #e8eaf0;
+      --text-weak: #8890a8;
+      --error: #ff5a5a;
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 48px 44px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .logo {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+
+    .logo h1 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+
+    .logo p {
+      margin-top: 8px;
+      font-size: 13px;
+      color: var(--text-weak);
+    }
+
+    .field {
+      margin-bottom: 16px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 13px;
+      color: var(--text-weak);
+      margin-bottom: 6px;
+    }
+
+    .field input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 11px 14px;
+      font-size: 14px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    .field input:focus {
+      border-color: var(--accent);
+    }
+
+    .field input::placeholder {
+      color: #4a4f63;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 8px;
+      padding: 12px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      letter-spacing: 0.02em;
+    }
+
+    .btn:hover { background: var(--accent-hover); }
+    .btn:active { opacity: 0.85; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .error {
+      display: none;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: rgba(255, 90, 90, 0.1);
+      border: 1px solid rgba(255, 90, 90, 0.3);
+      border-radius: var(--radius);
+      font-size: 13px;
+      color: var(--error);
+      text-align: center;
+    }
+
+    .error.show { display: block; }
+
+    footer {
+      margin-top: 32px;
+      font-size: 12px;
+      color: var(--text-weak);
+      text-align: center;
+    }
+
+    footer a {
+      color: var(--text-weak);
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+
+    footer a:hover { color: var(--text); }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">
+      <h1>HL分析</h1>
+      <p>AI 智能分析平台</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="field">
+        <label for="username">用户名</label>
+        <input id="username" type="text" placeholder="请输入用户名" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">密码</label>
+        <input id="password" type="password" placeholder="请输入密码" autocomplete="current-password" required>
+      </div>
+      <button class="btn" type="submit" id="submitBtn">进入系统</button>
+      <div class="error" id="errorMsg">用户名或密码错误，请重试</div>
+    </form>
+  </div>
+
+  <footer>
+    <a href="https://beian.miit.gov.cn/#/Integrated/index" target="_blank" rel="noopener">浙ICP备2026043092号-1</a>
+  </footer>
+
+  <script>
+    const APP_URL = window.location.origin + '/app/'
+    const LS_KEY = 'opencode.global.dat'
+    const SERVER_KEY = 'server'
+
+    async function tryAuth(url, username, password) {
+      const token = btoa(username + ':' + password)
+      try {
+        const res = await fetch(url + '/api/v2/health', {
+          headers: { 'Authorization': 'Basic ' + token },
+          signal: AbortSignal.timeout(8000),
+        })
+        return res.ok || res.status === 404
+      } catch {
+        return false
+      }
+    }
+
+    function saveToLocalStorage(url, username, password) {
+      const serverEntry = {
+        type: 'http',
+        http: { url, username, password }
+      }
+      let stored = {}
+      try {
+        const raw = localStorage.getItem(LS_KEY)
+        if (raw) stored = JSON.parse(raw)
+      } catch {}
+      stored[SERVER_KEY] = { list: [serverEntry], projects: {}, lastProject: {} }
+      localStorage.setItem(LS_KEY, JSON.stringify(stored))
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault()
+      const username = document.getElementById('username').value.trim()
+      const password = document.getElementById('password').value
+      const btn = document.getElementById('submitBtn')
+      const err = document.getElementById('errorMsg')
+
+      err.classList.remove('show')
+      btn.disabled = true
+      btn.textContent = '验证中...'
+
+      const serverUrl = window.location.origin
+      const ok = await tryAuth(serverUrl, username, password)
+
+      if (ok) {
+        saveToLocalStorage(serverUrl, username, password)
+        window.location.href = APP_URL
+      } else {
+        err.classList.add('show')
+        btn.disabled = false
+        btn.textContent = '进入系统'
+      }
+    })
+  </script>
+</body>
+</html>
