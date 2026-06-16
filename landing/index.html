@@ -171,8 +171,8 @@
     async function tryAuth(url, username, password) {
       const token = btoa(username + ':' + password)
       try {
-        const res = await fetch(url + '/api/v2/health', {
-          headers: { 'Authorization': 'Basic ' + token },
+        const res = await fetch(url + '/api/v2/health?auth_token=' + encodeURIComponent(token), {
+          credentials: 'omit',
           signal: AbortSignal.timeout(8000),
         })
         return res.ok || res.status === 404
@@ -186,13 +186,9 @@
         type: 'http',
         http: { url, username, password }
       }
-      let stored = {}
-      try {
-        const raw = localStorage.getItem(LS_KEY)
-        if (raw) stored = JSON.parse(raw)
-      } catch {}
-      stored[SERVER_KEY] = { list: [serverEntry], projects: {}, lastProject: {} }
-      localStorage.setItem(LS_KEY, JSON.stringify(stored))
+      const data = { list: [serverEntry], projects: {}, lastProject: {} }
+      // MiMo reads from localStorage key: "opencode.global.dat:server"
+      localStorage.setItem('opencode.global.dat:server', JSON.stringify(data))
     }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
