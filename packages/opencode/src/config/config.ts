@@ -514,7 +514,7 @@ export const layer = Layer.effect(
     const readConfigFile = Effect.fnUntraced(function* (filepath: string) {
       return yield* fs.readFileString(filepath).pipe(
         Effect.catchIf(
-          (e) => e.reason._tag === "NotFound",
+          (e) => e.reason._tag === "NotFound" || e.reason._tag === "PermissionDenied",
           () => Effect.succeed(undefined),
         ),
         Effect.orDie,
