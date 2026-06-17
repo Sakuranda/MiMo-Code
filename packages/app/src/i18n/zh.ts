@@ -430,6 +430,7 @@ export const dict = {
   "toast.model.none.title": "未选择模型",
   "toast.model.none.description": "请先连接提供商以总结此会话",
   "toast.file.loadFailed.title": "加载文件失败",
+  "toast.file.downloadFailed.title": "下载文件失败",
   "toast.file.listFailed.title": "列出文件失败",
   "toast.context.noLineSelection.title": "未选择行",
   "toast.context.noLineSelection.description": "请先在文件标签中选择行范围。",
@@ -498,6 +499,7 @@ export const dict = {
 
   "session.tab.session": "会话",
   "session.tab.review": "审查",
+  "session.tab.files": "文件",
   "session.tab.context": "上下文",
   "session.panel.reviewAndFiles": "审查和文件",
   "session.review.filesChanged": "{{count}} 个文件变更",

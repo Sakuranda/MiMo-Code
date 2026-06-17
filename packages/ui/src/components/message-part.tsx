@@ -1851,11 +1851,13 @@ ToolRegistry.register({
   name: "write",
   render(props) {
     const i18n = useI18n()
+    const data = useData()
     const fileComponent = useFileComponent()
     const diagnostics = createMemo(() => getDiagnostics(props.metadata.diagnostics, props.input.filePath))
     const path = createMemo(() => props.input.filePath || "")
     const filename = () => getFilename(props.input.filePath ?? "")
     const pending = () => props.status === "pending" || props.status === "running"
+    const canDownload = () => props.status === "completed" && !!path() && !!data.downloadFile
     return (
       <div data-component="write-tool">
         <BasicTool
@@ -1879,7 +1881,19 @@ ToolRegistry.register({
                   </div>
                 </Show>
               </div>
-              <div data-slot="message-part-actions">{/* <DiffChanges diff={diff} /> */}</div>
+              <div data-slot="message-part-actions">
+                <Show when={canDownload()}>
+                  <Tooltip value={i18n.t("ui.messagePart.action.download")}>
+                    <IconButton
+                      icon="download"
+                      onClick={(e: MouseEvent) => {
+                        e.stopPropagation()
+                        data.downloadFile?.(path())
+                      }}
+                    />
+                  </Tooltip>
+                </Show>
+              </div>
             </div>
           }
         >

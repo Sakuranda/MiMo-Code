@@ -57,6 +57,7 @@ import { MaxMode } from "./max-mode"
 import { Shell } from "@/shell/shell"
 import { AppFileSystem } from "@mimo-ai/shared/filesystem"
 import { Truncate } from "@/tool"
+import { AttachmentSpill } from "./attachment-spill"
 import { decodeDataUrl } from "@/util/data-url"
 import { Process } from "@/util"
 import { Cause, Effect, Exit, Layer, Option, Scope, Context } from "effect"
@@ -1250,6 +1251,7 @@ NOTE: At any point in time through this workflow you should feel free to ask the
     })
 
     const createUserMessage = Effect.fn("SessionPrompt.createUserMessage")(function* (input: PromptInput) {
+      const ctx = yield* InstanceState.context
       const agentName = input.agent || (yield* agents.defaultAgent())
       const ag = yield* agents.get(agentName)
       if (!ag) {
@@ -1380,6 +1382,44 @@ NOTE: At any point in time through this workflow you should feel free to ask the
                     text: decodeDataUrl(part.url),
                   },
                   { ...part, messageID: info.id, sessionID: input.sessionID },
+                ]
+              }
+              if (!part.mime.startsWith("image/") && part.mime !== "application/pdf") {
+                const filename = part.filename ?? "file"
+                const spill = yield* AttachmentSpill.materialize({
+                  fsys,
+                  cwd: ctx.directory,
+                  sessionID: input.sessionID,
+                  partID: part.id ?? PartID.ascending(),
+                  filename,
+                  url: part.url,
+                }).pipe(Effect.exit)
+                if (Exit.isSuccess(spill)) {
+                  const { relativePath, sizeBytes } = spill.value
+                  return [
+                    {
+                      messageID: info.id,
+                      sessionID: input.sessionID,
+                      type: "text",
+                      synthetic: true,
+                      text:
+                        `[Attached file: ${filename} (${AttachmentSpill.humanSize(sizeBytes)}, ${part.mime})]\n` +
+                        `Saved to: ${relativePath}\n` +
+                        `Read it with the bash tool (python-docx / openpyxl / python-pptx / unzip).`,
+                    },
+                  ]
+                }
+                const error = Cause.squash(spill.cause)
+                log.error("failed to spill attachment", { error, filename })
+                const message = error instanceof Error ? error.message : String(error)
+                return [
+                  {
+                    messageID: info.id,
+                    sessionID: input.sessionID,
+                    type: "text",
+                    synthetic: true,
+                    text: `Failed to save attached file ${filename}: ${message}`,
+                  },
                 ]
               }
               break

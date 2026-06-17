@@ -22,6 +22,22 @@ const TEXT_MIMES = new Set([
 
 const SAMPLE = 4096
 
+const BINARY_EXTS = new Map([
+  ["docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+  ["doc", "application/msword"],
+  ["xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  ["xls", "application/vnd.ms-excel"],
+  ["pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"],
+  ["ppt", "application/vnd.ms-powerpoint"],
+  ["zip", "application/zip"],
+  ["tar", "application/x-tar"],
+  ["gz", "application/gzip"],
+  ["tgz", "application/gzip"],
+  ["bz2", "application/x-bzip2"],
+  ["7z", "application/x-7z-compressed"],
+  ["rar", "application/vnd.rar"],
+])
+
 function kind(type: string) {
   return type.split(";", 1)[0]?.trim().toLowerCase() ?? ""
 }
@@ -61,6 +77,7 @@ export async function attachmentMime(file: File) {
 
   if (textMime(type)) return "text/plain"
   const bytes = new Uint8Array(await file.slice(0, SAMPLE).arrayBuffer())
-  if (!textBytes(bytes)) return
-  return "text/plain"
+  if (textBytes(bytes)) return "text/plain"
+  if (type && type !== "application/octet-stream") return type
+  return BINARY_EXTS.get(suffix) ?? "application/octet-stream"
 }
